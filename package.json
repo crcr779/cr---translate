@@ -1,0 +1,9 @@
+{
+  "name": "voice-translate-vercel-openai",
+  "version": "1.0.0",
+  "description": "Voice translate site (English/Japanese -> Chinese) for Vercel using OpenAI",
+  "main": "api/translate.js",
+  "scripts": { "start": "vercel dev" },
+  "dependencies": { "openai": "^4.8.0" },
+  "engines": { "node": "18.x" }
+}

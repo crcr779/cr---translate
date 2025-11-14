@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8" />
+  <title>语音翻译：英/日 -> 中文</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;max-width:720px;margin:36px auto;padding:0 12px;}
+    button{padding:10px 14px;font-size:16px;}
+    pre{background:#f7f7f7;padding:12px;border-radius:6px;white-space:pre-wrap;}
+  </style>
+</head>
+<body>
+  <h1>语音翻译：英语 / 日语 → 中文</h1>
+
+  <div>
+    <label>识别语言：
+      <select id="lang">
+        <option value="auto">自动</option>
+        <option value="en-US">英语 (en-US)</option>
+        <option value="ja-JP" selected>日语 (ja-JP)</option>
+      </select>
+    </label>
+  </div>
+
+  <p>
+    <button id="start">开始语音输入</button>
+    <button id="stop">停止</button>
+  </p>
+
+  <h3>识别文本</h3>
+  <pre id="text">（等待语音输入）</pre>
+
+  <h3>翻译结果（中文）</h3>
+  <pre id="result">（翻译结果会显示在这里）</pre>
+
+<script>
+const startBtn = document.getElementById('start');
+const stopBtn = document.getElementById('stop');
+const textEl = document.getElementById('text');
+const resultEl = document.getElementById('result');
+const langSelect = document.getElementById('lang');
+
+let recognition;
+if (!('SpeechRecognition' in window) && !('webkitSpeechRecognition' in window)) {
+  textEl.textContent = '⚠️ 当前浏览器不支持 Web Speech API（建议使用 Chrome 桌面版）';
+} else {
+  const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new Rec();
+  recognition.interimResults = false;
+  recognition.continuous = false;
+}
+
+startBtn.addEventListener('click', () => {
+  if (!recognition) return;
+  const selected = langSelect.value;
+  recognition.lang = (selected==='auto') ? 'en-US' : selected;
+  recognition.start();
+  textEl.textContent = '正在监听... 请说话';
+});
+
+stopBtn.addEventListener('click', () => {
+  if (!recognition) return;
+  recognition.stop();
+});
+
+if (recognition) {
+  recognition.onresult = async (ev) => {
+    const text = ev.results[0][0].transcript;
+    textEl.textContent = text;
+    resultEl.textContent = '翻译中...';
+
+    try {
+      const resp = await fetch('/api/translate', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ text })
+      });
+      if (!resp.ok) {
+        const err = await resp.text();
+        resultEl.textContent = '翻译失败：' + err;
+        return;
+      }
+      const data = await resp.json();
+      resultEl.textContent = data.translation;
+    } catch (e) {
+      resultEl.textContent = '网络或服务器错误：' + e.message;
+    }
+  };
+
+  recognition.onerror = (e) => {
+    textEl.textContent = '识别错误：' + (e.error || JSON.stringify(e));
+  };
+}
+</script>
+</body>
+</html>
